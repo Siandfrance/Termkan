@@ -39,6 +39,7 @@ pub mod math;
 pub mod img;
 
 pub mod rds;
+pub mod input;
 
 
 
@@ -49,8 +50,10 @@ mod tests {
     use crate::rds::Renderer;
     use std::time::Duration;
     use std::thread::sleep;
+
     use crate::math::Vec2;
     use crate::img::*;
+    use crate::input::{InputServer, InputEvent, KeyEvent, MouseEvent, MouseButton};
 
 
     #[test]
@@ -67,5 +70,48 @@ mod tests {
         sleep(Duration::from_secs(2));
 
         Renderer::exit();
+    }
+
+
+    #[test]
+    fn input() {
+        let rdr = Renderer::get();
+        let inp = InputServer::get();
+
+        let mut pos = Renderer::get_size() / 2;
+
+        loop {
+            let size = Renderer::get_size();
+
+            // manage input
+            match inp.get_event() {
+                Some(event) => {
+                    match event {
+                    InputEvent::Key(event) => match event {
+                        KeyEvent::Ctrl('c') => Renderer::exit(),
+                        KeyEvent::Up        => if pos.y >  1            {pos.y -= 1},
+                        KeyEvent::Down      => if pos.y <= size.y - 2   {pos.y += 1},
+                        KeyEvent::Left      => if pos.x >  1            {pos.x -= 1},
+                        KeyEvent::Right     => if pos.x <= size.x - 2   {pos.x += 1},
+                        _ => ()
+                    }
+                    InputEvent::Mouse(event) => match event {
+                        MouseEvent::ButtonPressed(MouseButton::Left, mpos) | MouseEvent::Hold(MouseButton::Left, mpos)
+                            => pos = mpos,
+                        _ => ()
+                    }
+                    _ => ()
+                }
+                }
+                None => ()
+            };
+
+            // draw on screen
+            rdr.begin_draw();
+            rdr.clear_screen(Color::BLACK);
+            rdr.draw_rect_boundary(Vec2::ZERO, size - vec2!(1, 1), Color::BROWN);
+            rdr.draw_point(pos, Color::WHITE);
+            rdr.end_draw();
+        }
     }
 }

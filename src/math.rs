@@ -25,7 +25,7 @@
 */
 
 
-use std::ops::{Add, Sub, AddAssign, SubAssign};
+use std::ops::{Add, Sub, AddAssign, SubAssign, Mul, MulAssign, Div, DivAssign};
 
 
 macro_rules! vec2 {
@@ -42,9 +42,12 @@ pub struct Vec2 {
 
 impl Vec2 {
 
-    pub const ZERO: Vec2 = Vec2{x: 0, y: 0};
+    pub const ZERO: Vec2 = vec2!(0, 0);
+    pub const UNIX: Vec2 = vec2!(1, 0);
+    pub const UNIY: Vec2 = vec2!(0, 1);
 
-    pub fn point(v: (i32, i32)) -> Self {
+
+    pub const fn point(v: (i32, i32)) -> Self {
         Vec2 {
             x: v.0,
             y: v.1
@@ -52,8 +55,11 @@ impl Vec2 {
     }
 
 
-    pub fn new(x: i32, y: i32) -> Self {
-        Self::point((x, y))
+    pub const fn new(x: i32, y: i32) -> Self {
+        Vec2 {
+            x: x,
+            y: y
+        }
     }
 
 }
@@ -69,6 +75,14 @@ impl Add for Vec2 {
 }
 
 
+impl AddAssign for Vec2 {
+
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
+
 impl Sub for Vec2 {
     type Output = Self;
 
@@ -78,17 +92,43 @@ impl Sub for Vec2 {
 }
 
 
-impl AddAssign for Vec2 {
+impl SubAssign for Vec2 {
 
-    fn add_assign(&mut self, rhs: Self) {
+    fn sub_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
     }
 }
 
 
-impl SubAssign for Vec2 {
+impl Mul<i32> for Vec2 {
+    type Output = Self;
 
-    fn sub_assign(&mut self, rhs: Self) {
-        *self = *self + rhs;
+    fn mul(self, rhs: i32) -> Self::Output {
+        vec2!(self.x * rhs, self.y * rhs)
+    }
+}
+
+
+impl MulAssign<i32> for Vec2 {
+
+    fn mul_assign(&mut self, rhs: i32) {
+        *self = *self * rhs;
+    }
+}
+
+
+impl Div<i32> for Vec2 {
+    type Output = Self;
+
+    fn div(self, rhs: i32) -> Self::Output {
+        vec2!(self.x / rhs, self.y / rhs)
+    }
+}
+
+
+impl DivAssign<i32> for Vec2 {
+
+    fn div_assign(&mut self, rhs: i32) {
+        *self = *self / rhs;
     }
 }

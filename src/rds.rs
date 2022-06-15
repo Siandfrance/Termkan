@@ -37,7 +37,7 @@ use std::mem;
 use std::io::{stdout, Write};
 
 use std::thread;
-use std::sync::mpsc;
+use std::sync::{mpsc, Barrier, Arc};
 
 use std::io::stdin;
 use std::os::unix::io::AsRawFd;
@@ -57,11 +57,13 @@ enum RenderingDirective {
     DrawRect(Vec2, Vec2, Color),
     DrawRectBoudary(Vec2, Vec2, Color),
     DrawEllipseBoudary(Vec2, Vec2, Color),
+    DrawPoint(Vec2, Color),
 
     ClearScreen(Color),
 
     UpdateScreenSize(Vec2),
-    PushFrame,
+    BeginFrame,
+    PushFrame
 }
 
 
@@ -74,7 +76,9 @@ pub struct Renderer {
     prev_screen_size: Vec2,
 
     _server_handle: Option<thread::JoinHandle<()>>,
-    sender: mpsc::Sender<RenderingDirective>
+    sender: mpsc::Sender<RenderingDirective>,
+
+    frame_barrier: Arc<Barrier>
 }
 
 
@@ -85,7 +89,9 @@ static mut EXIT: bool = false;
 impl Renderer {
 
     fn init() -> Renderer {
-        let mut termios = match Termios::from_fd(stdin().as_raw_fd()) {
+        let stdinfd = stdin().as_raw_fd();
+
+        let mut termios = match Termios::from_fd(stdinfd) {
             Ok(t)  => t,
             Err(_) => panic!("Could not read stdin fd")
         };
@@ -97,15 +103,21 @@ impl Renderer {
         termios.c_lflag &= !(ECHO | ICANON | ISIG);
         termios.c_cc[VMIN] = 1;
         termios.c_cc[VTIME] = 0;
+
+        tcsetattr(stdinfd, TCSANOW, &mut termios).expect("could not set stdin attributes");
         
-        print!("{}{}", 
-            csi!("?25l"), // hide cursor
-            csi!("?1049h") // use alternate screen buffer
+        print!("{}{}{}", 
+            csi!("?25l"),                                   // hide cursor
+            csi!("?1049h"),                                 // use alternate screen buffer
+            "\x1b[?1000h\x1b[?1002h\x1b[?1015h\x1b[?1006h"  // mouse support
         );
         stdout().flush().expect("Could not write to stdout"); 
 
         // setup and start server
         let (rx, tx) = mpsc::channel();
+        let barrier = Arc::new(Barrier::new(2));
+        let frame_barrier = Arc::clone(&barrier);
+
         let handle = thread::spawn(move || {
             let mut screen_size = Renderer::get_size();
             let mut screen: Image = Image::new(0, 0);
@@ -121,6 +133,7 @@ impl Renderer {
                     RenderingDirective::DrawRect(p, s, c) => screen.rect(p, s, c),
                     RenderingDirective::DrawRectBoudary(p, s, c) => screen.rect_boudary(p, s, c),
                     RenderingDirective::DrawEllipseBoudary(center, s, c) => screen.ellipse_boundary(center, s, c),
+                    RenderingDirective::DrawPoint(p, c) => screen.point(p, c),
 
                     RenderingDirective::ClearScreen(c) => screen.clear(c),
 
@@ -128,6 +141,8 @@ impl Renderer {
                         screen_size = size;
                         screen.resize(size.x as usize, size.y as usize);
                     }
+
+                    RenderingDirective::BeginFrame => {frame_barrier.wait(); ()},
                     RenderingDirective::PushFrame => {
                         // position cursor
                         print!("\x1b[H");
@@ -183,7 +198,9 @@ impl Renderer {
             prev_screen_size: Vec2::ZERO,
 
             _server_handle: Some(handle),
-            sender: rx
+            sender: rx,
+
+            frame_barrier: barrier
         }
     }
 
@@ -237,6 +254,9 @@ impl Renderer {
             self.sender.send(RenderingDirective::UpdateScreenSize(new_size)).expect("Rendering thread stoped");
             self.prev_screen_size = new_size;
         }
+
+        self.sender.send(RenderingDirective::BeginFrame).expect("Rendering thread stoped");
+        self.frame_barrier.wait();
     }
 
 
@@ -263,7 +283,6 @@ impl Renderer {
 
     pub fn draw_rect(&mut self, p: Vec2, s: Vec2, c: Color) {
         self.can_draw();
-        eprintln!("{:?}", c);
         self.sender.send(RenderingDirective::DrawRect(p, s, c)).expect("Rendering thread stoped");
     }
 
@@ -279,6 +298,11 @@ impl Renderer {
         self.sender.send(RenderingDirective::DrawEllipseBoudary(c, s, col)).expect("Rendering thread stoped");
     }
 
+
+    pub fn draw_point(&mut self, p: Vec2, c: Color) {
+        self.can_draw();
+        self.sender.send(RenderingDirective::DrawPoint(p, c)).expect("Rendering thread stoped");
+    }
 }
 
 
@@ -289,9 +313,10 @@ impl Drop for Renderer {
         self.termios.c_cc = self.default_c_cc;
         self.termios.c_lflag = self.default_c_lflags;
 
-        print!("{}{}",
-            csi!("?25h"), // show cursor
-            csi!("?1049l") // use main screen buffer
+        print!("{}{}{}",
+            csi!("?25h"),                                   // show cursor
+            csi!("?1049l"),                                 // use main screen buffer
+            "\x1b[?1006l\x1b[?1015l\x1b[?1002l\x1b[?1000l"  // mouse support
         );
         stdout().flush().expect("Could not write to stdout");
 
