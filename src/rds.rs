@@ -121,6 +121,7 @@ impl Renderer {
         let handle = thread::spawn(move || {
             let mut screen_size = Renderer::get_size();
             let mut screen: Image = Image::new(0, 0);
+            let mut prev_screen: Image = Image::new(0, 0);
 
             let mut back: Color = Color::BLACK;
             let mut fore: Color = Color::BLACK;
@@ -146,10 +147,18 @@ impl Renderer {
                     RenderingDirective::PushFrame => {
                         // position cursor
                         print!("\x1b[H");
+
+                        let mut skiped = false;
+
                         for j in (0..screen_size.y).step_by(2) {
                             for i in 0..screen_size.x {
                                 let pos1 = Vec2::new(i, j);
                                 let pos2 = Vec2::new(i, j + 1);
+
+                                if screen.size() == prev_screen.size() && screen[pos1] == prev_screen[pos1] && screen[pos2] == prev_screen[pos2] {
+                                    skiped = true;
+                                    continue;
+                                }
                                 
                                 // update color
                                 if screen[pos1] != back && screen[pos1] != fore && screen[pos2] == back {
@@ -171,6 +180,11 @@ impl Renderer {
                                     print!("{:-}", back);
                                 }
 
+                                if skiped {
+                                    print!("\x1b[{};{}H", j/2 + 1, i + 1);
+                                    skiped = false;
+                                }
+
                                 // print pixel
                                 if screen[pos1] == back && screen[pos2] == back {
                                     print!(" ");
@@ -184,6 +198,7 @@ impl Renderer {
                             }
                         }
                         stdout().flush().expect("Could not write to stdout");
+                        prev_screen = screen.clone();
                     }
                 }
             }

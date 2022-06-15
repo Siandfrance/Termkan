@@ -221,7 +221,7 @@ impl fmt::Display for Color {
 }
 
 
-
+#[derive(Clone)]
 pub struct Image {
     data: Vec<Color>,
     size: Vec2
