@@ -25,6 +25,12 @@
 */
 
 
+/* 
+    Credit to `redox-os` for the termion crate that helped with the design of this library
+    termion gitlab: https://gitlab.redox-os.org/redox-os/termion
+*/
+
+
 extern crate termios;
 
 
