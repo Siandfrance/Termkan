@@ -366,23 +366,23 @@ impl InputServer {
         let (input_send, input_recv) = mpsc::channel();
 
         let handle = thread::spawn(move || {
+            let mut mb = MouseButton::Left;
             loop {
                 let mut stdin = stdin().bytes();
-                let mut mb = MouseButton::Left;
 
                 if let Some(Ok(item)) = stdin.next() {
                     match parse_event(item, &mut stdin) {
-                        Ok(event) => {
-                            let event = match event {
+                        Ok(evt) => {
+                            let event = match evt {
                                 InputEvent::Mouse(MouseEvent::ButtonPressed(button, _)) => {
                                     mb = button;
-                                    event
+                                    evt
                                 }
                                 InputEvent::Mouse(MouseEvent::ButtonReleased(_, pos)) =>
                                     InputEvent::Mouse(MouseEvent::ButtonReleased(mb, pos)),
                                 InputEvent::Mouse(MouseEvent::Hold(_, pos)) =>
                                     InputEvent::Mouse(MouseEvent::Hold(mb, pos)),
-                                _ => event
+                                _ => evt
                             };
                             input_send.send(event).expect("input recv dropped")
                         }

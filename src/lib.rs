@@ -53,7 +53,7 @@ mod tests {
 
     use crate::math::Vec2;
     use crate::img::*;
-    use crate::input::{InputServer, InputEvent, KeyEvent, MouseEvent, MouseButton};
+    use crate::input::{InputServer, InputEvent, KeyEvent, MouseEvent};
 
 
     #[test]
@@ -96,7 +96,7 @@ mod tests {
                         _ => ()
                     }
                     InputEvent::Mouse(event) => match event {
-                        MouseEvent::ButtonPressed(MouseButton::Left, mpos) | MouseEvent::Hold(MouseButton::Left, mpos)
+                        MouseEvent::ButtonPressed(_, mpos) | MouseEvent::Hold(_, mpos)
                             => pos = mpos,
                         _ => ()
                     }
