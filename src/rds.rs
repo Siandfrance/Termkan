@@ -62,7 +62,6 @@ enum RenderingDirective {
 
     UpdateScreenSize(Vec2),
     PushFrame,
-    Stop
 }
 
 
@@ -74,7 +73,7 @@ pub struct Renderer {
     building_frame: bool,
     prev_screen_size: Vec2,
 
-    server_handle: Option<thread::JoinHandle<()>>,
+    _server_handle: Option<thread::JoinHandle<()>>,
     sender: mpsc::Sender<RenderingDirective>
 }
 
@@ -171,7 +170,6 @@ impl Renderer {
                         }
                         stdout().flush().expect("Could not write to stdout");
                     }
-                    RenderingDirective::Stop => break
                 }
             }
         });
@@ -184,7 +182,7 @@ impl Renderer {
             building_frame: false,
             prev_screen_size: Vec2::ZERO,
 
-            server_handle: Some(handle),
+            _server_handle: Some(handle),
             sender: rx
         }
     }
@@ -297,10 +295,7 @@ impl Drop for Renderer {
         );
         stdout().flush().expect("Could not write to stdout");
 
-
-        self.sender.send(RenderingDirective::Stop).unwrap();
-        self.server_handle.take().expect("No JoinHandle in Renderer")
-                          .join().expect("RenderingServer thread was stoped"); // =D
+        std::process::exit(0);
     }
 }
 
