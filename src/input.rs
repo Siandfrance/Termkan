@@ -24,7 +24,7 @@
 
 */
 
-// HEAVELY inspiered by the termion library
+// HEAVELY inspired by the termion library
 
 
 use std::io::{Error, ErrorKind};
