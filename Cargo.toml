@@ -3,7 +3,6 @@ name = "termkan"
 version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/Siandfrance/Termkan"
-license = "MIT"
 license-file = "LICENSE"
 keywords = [ "graphics", "terminal", "linux", "2d" ]
 readme = "README.md"
