@@ -1,5 +1,5 @@
 # Termkan
- A *linux* terminal renderer library in rust
+ A *linux* terminal renderer library in rust.
 
 # Tests
 
