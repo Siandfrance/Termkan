@@ -3,6 +3,7 @@ name = "termkan"
 version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/Siandfrance/Termkan"
+description = "A *linux* terminal renderer library in rust."
 license-file = "LICENSE"
 keywords = [ "graphics", "terminal", "linux", "2d" ]
 readme = "README.md"
