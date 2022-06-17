@@ -31,6 +31,14 @@ use std::ops::{Index, IndexMut};
 use std::fmt;
 
 
+/// RGB Color struct.
+/// 
+/// Fields:
+/// ```
+/// Color.r
+/// Color.g
+/// Color.b
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Color {
     pub r: u8,
@@ -189,7 +197,7 @@ impl Color {
     pub const YELLOW_GREEN       : Color = Color::hex(0x9acd31);
 
 
-
+    /// Creates a color.
     pub const fn rgb(r: u8, g: u8, b: u8) -> Self {
         Self {
             r: r,
@@ -199,6 +207,7 @@ impl Color {
     }
 
 
+    /// Creates a color.
     pub const fn hex(h: u32) -> Self {
         Self {
             r: ((h & 0x00FF0000) / 0x00010000) as u8,
@@ -211,6 +220,7 @@ impl Color {
 
 impl fmt::Display for Color {
 
+    /// Writes the CSI to set background or color (respectively when using {:-} or {:+}) to `f`.
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if f.sign_minus() {
             write!(f, "\x1b[48;2;{};{};{}m", self.r, self.g, self.b)
@@ -222,6 +232,8 @@ impl fmt::Display for Color {
 
 
 #[derive(Clone)]
+/// Image struct. This is a Color buffer.
+/// Pixels can be accessed by indexing with the pixel coordinates.
 pub struct Image {
     data: Vec<Color>,
     size: Vec2
@@ -230,6 +242,7 @@ pub struct Image {
 
 impl Image {
 
+    /// Creates an image of size (`w`, `h`). All the pixels are set to black.
     pub fn new(w: usize, h: usize) -> Self {
         Self {
             data: vec![Color::BLACK; w * h],
@@ -238,11 +251,15 @@ impl Image {
     }
 
 
+    /// Returns the size of the image.
     pub fn size(&self) -> Vec2 {
         self.size
     }
 
 
+    /// Resizes the image. New pixels are set to black.
+    /// 
+    /// TODO: pixels are not reset, though they should be moved to keep the start of the image.
     pub fn resize(&mut self, w: usize, h: usize) {
         self.data.resize(w * h, Color::BLACK);
         self.data.shrink_to_fit();
@@ -250,16 +267,18 @@ impl Image {
     }
 
 
-    fn out_of_range(&self, p: Vec2) -> bool {
+    fn is_out_of_range(&self, p: Vec2) -> bool {
         p.x < 0 || p.y < 0 || p.x >= self.size.x || p.y >= self.size.y
     }
 
 
+    /// Sets the pixel color at `p` to `c`.
     pub fn point(&mut self, p: Vec2, c: Color) {
         self[p] = c;
     }
 
 
+    /// Draws a line of color `c` between `p1` and `p2`.
     pub fn line(&mut self, p1: Vec2, p2: Vec2, c: Color) {
         let mut p1 = p1;
 
@@ -291,6 +310,7 @@ impl Image {
     }
 
 
+    /// Same as `rect` but draws only the four sides of the rectangle.
     pub fn rect_boudary(&mut self, p: Vec2, s: Vec2, c: Color) {
         self.line(Vec2::new(p.x      , p.y      ), Vec2::new(p.x + s.x, p.y      ), c);
         self.line(Vec2::new(p.x + s.x, p.y      ), Vec2::new(p.x + s.x, p.y + s.y), c);
@@ -299,6 +319,8 @@ impl Image {
     }
 
 
+    /// Draws a rectangle of color `c` and of size `s`. 
+    /// `p` is the coordinate of the top left corner of the rectangle.
     pub fn rect(&mut self, p: Vec2, s: Vec2, c: Color) {
         let mut p = p;
         let mut s = s;
@@ -328,6 +350,7 @@ impl Image {
     }
 
 
+    /// Sets all the pixels' color in the screen to `c`.
     pub fn clear(&mut self, c: Color) {
         for i in 0..self.data.len() {
             self.data[i] = c;
@@ -343,6 +366,8 @@ impl Image {
     }
 
 
+    /// Draws an ellipse of color `col`. `c` is the center of the ellipse and `s` is the size of the rectangle
+    /// in which the ellipse is inscribed.
     pub fn ellipse_boundary(&mut self, center: Vec2, size: Vec2, c: Color) {
         let a = size.x / 2;
         let b = size.y / 2;
@@ -402,7 +427,7 @@ impl Index<Vec2> for Image {
     type Output = Color;
 
     fn index(&self, p: Vec2) -> &Self::Output {
-        if !self.out_of_range(p) {
+        if !self.is_out_of_range(p) {
             &self.data[(p.x + p.y * self.size.x) as usize]
         } else {
             &Color::BLACK
@@ -416,7 +441,7 @@ impl IndexMut<Vec2> for Image {
     fn index_mut(&mut self, p: Vec2) -> &mut Self::Output {
         static mut TEMP: Color = Color::BLACK;
 
-        if !self.out_of_range(p) {
+        if !self.is_out_of_range(p) {
             &mut self.data[(p.x + p.y * self.size.x) as usize]
         } else {
             unsafe { &mut TEMP } // NOT GOOD, ignore index out of range

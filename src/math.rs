@@ -33,6 +33,9 @@ macro_rules! vec2 {
 }
 
 
+
+/// Two dimentional vector. Has math operations implemented.
+/// Can be instanced with the macro `vec2!`.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Vec2 {
     pub x: i32,

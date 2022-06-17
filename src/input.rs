@@ -31,7 +31,7 @@ use std::io::{Error, ErrorKind};
 use std::str;
 
 // use std::{fs, io};
-use std::io::{Read, stdin};
+use std::io::{Read, Write, stdin, stdout};
 
 use std::thread;
 use std::sync::mpsc;
@@ -58,10 +58,10 @@ pub enum KeyEvent {
     End,
     PageUp,
     PageDown,
-    BackTab,
+    BackTab, // Shift + Tab
     Delete,
     Insert,
-    F(u8),
+    F(u8),   // Only some function keys are reachable
     Char(char),
     Alt(char),
     Ctrl(char),
@@ -345,23 +345,33 @@ fn parse_utf8_char<I>(c: u8, iter: &mut I) -> Result<char, Error>
 }
 
 
-// fn get_tty() -> io::Result<fs::File> {
-//     fs::OpenOptions::new().read(true).write(true).open("/dev/tty")
-// }
+/// Input Server Singleton instance
+static mut INPUT_SERVER: Option<Input> = None;
 
 
-
-static mut INPUT_SERVER: Option<InputServer> = None;
-
-
-pub struct InputServer {
+/// The Input is a singleton that handles async io operations
+/// 
+/// # Usage
+/// 
+/// To get events from keyboard and mouse, there are two functions:
+/// 
+/// get_event - returns Some(InputEvent) or None depending on weather there was an input
+/// 
+/// get_event_blocking - waits for an event and returns it
+/// 
+/// # Mouse
+/// 
+/// To have mouse input or not use enable_mouse or disable_mouse
+/// by default, there is no mouse input
+pub struct Input {
     _server_handle: Option<thread::JoinHandle<()>>,
     input_recv: mpsc::Receiver<InputEvent>
 }
 
 
-impl InputServer {
+impl Input {
 
+    /// Creates the Input singleton, will only be called once
     fn init() -> Self {
         let (input_send, input_recv) = mpsc::channel();
 
@@ -399,12 +409,15 @@ impl InputServer {
     }
 
 
-    pub fn get() -> &'static mut InputServer {
+    /// Returns the Input singleton.
+    /// If no call to Input::get() is made, the server never starts;
+    /// this can be usefull when custom input handling is needed.
+    pub fn get() -> &'static mut Input {
         unsafe {
             match &mut INPUT_SERVER {
                 None => {
-                    INPUT_SERVER = Some(InputServer::init());
-                    InputServer::get()
+                    INPUT_SERVER = Some(Input::init());
+                    Input::get()
                 },
                 Some(i) => i
             }
@@ -412,12 +425,29 @@ impl InputServer {
     }
 
 
+    /// If there was an event, return it.
+    /// Never blocks the current thread.
     pub fn get_event(&mut self) -> Option<InputEvent> {
         self.input_recv.try_recv().ok()
     }
 
 
+    /// Wait for an InputEvent to occur and return it.
     pub fn get_event_blocking(&mut self) -> InputEvent {
-        self.input_recv.recv().ok().expect("InputServer thread was killed")
+        self.input_recv.recv().ok().expect("Input thread was killed")
+    }
+
+
+    /// Enable MouseEvent.
+    pub fn enable_mouse() {
+        print!("\x1b[?1000h\x1b[?1002h\x1b[?1015h\x1b[?1006h");
+        stdout().flush().expect("Could not write to stdout");
+    }
+
+
+    /// Disable MouseEvent.
+    pub fn disable_mouse() {
+        print!("\x1b[?1006l\x1b[?1015l\x1b[?1002l\x1b[?1000l");
+        stdout().flush().expect("Could not write to stdout");
     }
 }

@@ -53,11 +53,11 @@ mod tests {
 
     use crate::math::Vec2;
     use crate::img::*;
-    use crate::input::{InputServer, InputEvent, KeyEvent, MouseEvent};
+    use crate::input::{Input, InputEvent, KeyEvent, MouseEvent};
 
 
     #[test]
-    fn it_works() {
+    fn renderer() {
         let rdr = Renderer::get();
 
         rdr.begin_draw();
@@ -65,6 +65,8 @@ mod tests {
         rdr.draw_rect(vec2!(40, 15), vec2!(15, -10), Color::RED);
         rdr.draw_rect_boundary(vec2!(40, 15), vec2!(15, -10), Color::CHOCOLATE);
         rdr.draw_ellipse_boundary(vec2!(45, 25), vec2!(25, 8), Color::AQUAMARINE);
+
+        rdr.draw_ellipse_boundary(vec2!(60, 30), vec2!(4, 4), Color::DEEP_PINK);
 
         rdr.end_draw();
         sleep(Duration::from_secs(2));
@@ -76,7 +78,8 @@ mod tests {
     #[test]
     fn input() {
         let rdr = Renderer::get();
-        let inp = InputServer::get();
+        let inp = Input::get();
+        Input::enable_mouse();
 
         let mut pos = Renderer::get_size() / 2;
 

@@ -29,6 +29,7 @@ extern crate libc;
 
 use crate::math::Vec2;
 use crate::img::{Image, Color};
+use crate::input::Input;
 
 use termios::*;
 
@@ -51,7 +52,7 @@ macro_rules! csi {
 }
 
 
-
+/// Commands that are sent to the rendering server by the Renderer singleton.
 enum RenderingDirective {
     DrawLine(Vec2, Vec2, Color),
     DrawRect(Vec2, Vec2, Color),
@@ -67,6 +68,29 @@ enum RenderingDirective {
 }
 
 
+/// This is the core of the library. It will send commands to the rendering server to print on screen.
+/// 
+/// # Usage
+/// 
+/// ```
+/// // get the renderer
+/// let rdr = Renderer::get();
+/// 
+/// ...
+/// 
+/// // start drawing on a frame
+/// rdr.begin_draw();
+/// 
+/// ... // use drawing functions (eg. draw_rect, draw_point...)
+/// 
+/// rdr.end_draw(); // this pushes the frame to the screen
+/// 
+/// ...
+/// 
+/// Renderer::exit(); // to quit the program and reset terminal settings
+/// ```
+/// 
+/// Screen coordinates start in the top left at (0, 0)
 pub struct Renderer {
     termios: Termios,
     default_c_lflags: u32,
@@ -82,12 +106,13 @@ pub struct Renderer {
 }
 
 
+/// Renderer singleton
 static mut RENDERER: Option<Renderer> = None;
-static mut EXIT: bool = false;
 
 
 impl Renderer {
 
+    /// Creates the Input singleton, will only be called once
     fn init() -> Renderer {
         let stdinfd = stdin().as_raw_fd();
 
@@ -106,10 +131,9 @@ impl Renderer {
 
         tcsetattr(stdinfd, TCSANOW, &mut termios).expect("could not set stdin attributes");
         
-        print!("{}{}{}", 
+        print!("{}{}", 
             csi!("?25l"),                                   // hide cursor
-            csi!("?1049h"),                                 // use alternate screen buffer
-            "\x1b[?1000h\x1b[?1002h\x1b[?1015h\x1b[?1006h"  // mouse support
+            csi!("?1049h")                                 // use alternate screen buffer
         );
         stdout().flush().expect("Could not write to stdout"); 
 
@@ -220,19 +244,17 @@ impl Renderer {
     }
 
 
+    /// Exits the program and reset terminal setttings (should be called before the program ends).
     pub fn exit() {
         unsafe {
-            EXIT = true;
             RENDERER = None;
         }
     }
 
 
+    /// Returns the Renderer instance.
     pub fn get() -> &'static mut Renderer {
         unsafe {
-            if EXIT {
-                panic!("Ty to get Renderer after exit");
-            }
             match &mut RENDERER {
                 None => { // construct the renderer, and initialize
                     RENDERER = Some(Renderer::init());
@@ -244,6 +266,13 @@ impl Renderer {
     }
 
 
+    /// Returns the screen dimension.
+    /// ```
+    /// let size = Renderer::get_size();
+    /// 
+    /// size.x // width of the screen
+    /// size.y // height of the screen
+    /// ```
     pub fn get_size() -> Vec2 {
         unsafe {
             let mut size: TermSize = mem::zeroed();
@@ -259,6 +288,9 @@ impl Renderer {
     }
 
 
+    /// Starts drawing a frame.
+    /// 
+    /// Will panic if called twice before an end_draw
     pub fn begin_draw(&mut self) {
         if self.building_frame {
             panic!("begin_draw called when already building a frame");
@@ -275,6 +307,7 @@ impl Renderer {
     }
 
 
+    /// Ends drawing a frame and pushes it to the screen.
     pub fn end_draw(&mut self) {
         if !self.building_frame {
             panic!("end_draw called when already building a frame");
@@ -284,36 +317,44 @@ impl Renderer {
     }
 
 
+    /// Sets all the pixels' color in the screen to `c`.
     pub fn clear_screen(&mut self, c: Color) {
         self.can_draw();
         self.sender.send(RenderingDirective::ClearScreen(c)).expect("Rendering thread stoped");
     }
 
 
+    /// Draws a line of color `c` between `p1` and `p2`.
     pub fn draw_line(&mut self, p1: Vec2, p2: Vec2, c: Color) {
         self.can_draw();
         self.sender.send(RenderingDirective::DrawLine(p1, p2, c)).expect("Rendering thread stoped");
     }
 
 
+    /// Draws a rectangle of color `c` and of size `s`. 
+    /// `p` is the coordinate of the top left corner of the rectangle.
     pub fn draw_rect(&mut self, p: Vec2, s: Vec2, c: Color) {
         self.can_draw();
         self.sender.send(RenderingDirective::DrawRect(p, s, c)).expect("Rendering thread stoped");
     }
 
 
+    /// Same as `draw_rect` but draws only the four sides of the rectangle.
     pub fn draw_rect_boundary(&mut self, p: Vec2, s: Vec2, c: Color) {
         self.can_draw();
         self.sender.send(RenderingDirective::DrawRectBoudary(p, s, c)).expect("Rendering thread stoped");
     }
 
 
+    /// Draws an ellipse of color `col`. `c` is the center of the ellipse and `s` is the size of the rectangle
+    /// in which the ellipse is inscribed.
     pub fn draw_ellipse_boundary(&mut self, c: Vec2, s: Vec2, col: Color) {
         self.can_draw();
         self.sender.send(RenderingDirective::DrawEllipseBoudary(c, s, col)).expect("Rendering thread stoped");
     }
 
 
+    /// Sets the color of the pixel at `p` to `c`.
     pub fn draw_point(&mut self, p: Vec2, c: Color) {
         self.can_draw();
         self.sender.send(RenderingDirective::DrawPoint(p, c)).expect("Rendering thread stoped");
@@ -323,17 +364,18 @@ impl Renderer {
 
 impl Drop for Renderer {
 
+    /// When the renderer singleton is droped, reset terminal settings and exit.
     fn drop(&mut self) {
         // return settings to default
         self.termios.c_cc = self.default_c_cc;
         self.termios.c_lflag = self.default_c_lflags;
 
-        print!("{}{}{}",
+        print!("{}{}",
             csi!("?25h"),                                   // show cursor
-            csi!("?1049l"),                                 // use main screen buffer
-            "\x1b[?1006l\x1b[?1015l\x1b[?1002l\x1b[?1000l"  // mouse support
+            csi!("?1049l")                                  // use main screen buffer
         );
         stdout().flush().expect("Could not write to stdout");
+        Input::disable_mouse();
 
         std::process::exit(0);
     }
@@ -341,7 +383,6 @@ impl Drop for Renderer {
 
 
 struct TermSize {
-    // should be c_short
     row: libc::c_ushort,
     col: libc::c_ushort,
     _x : libc::c_ushort,
