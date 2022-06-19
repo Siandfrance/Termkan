@@ -359,6 +359,15 @@ impl Renderer {
         self.can_draw();
         self.sender.send(RenderingDirective::DrawPoint(p, c)).expect("Rendering thread stoped");
     }
+
+
+    /// Rings the terminal bell. Can only be called during the creation of a frame
+    /// 
+    /// Technical note: the bell will ring when calling `end_draw`
+    pub fn ring_bell(&self) {
+        self.can_draw();
+        print!("\x07");
+    }
 }
 
 

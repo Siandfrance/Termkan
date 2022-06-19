@@ -68,6 +68,8 @@ mod tests {
 
         rdr.draw_ellipse_boundary(vec2!(60, 30), vec2!(4, 4), Color::DEEP_PINK);
 
+        rdr.ring_bell();
+
         rdr.end_draw();
         sleep(Duration::from_secs(2));
 
