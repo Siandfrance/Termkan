@@ -32,6 +32,7 @@
 
 
 extern crate termios;
+extern crate image;
 
 
 #[macro_use]
@@ -48,18 +49,24 @@ pub mod input;
 mod tests {
 
     use crate::rds::Renderer;
-    use std::time::Duration;
-    use std::thread::sleep;
 
     use crate::math::Vec2;
     use crate::img::*;
     use crate::input::{Input, InputEvent, KeyEvent, MouseEvent};
 
+    use std::sync::{Arc, Mutex};
+
 
     #[test]
     fn renderer() {
+        // load an image and draw it on screen
+        let img = Arc::new(Mutex::new(Image::load("icon.png").unwrap()));
+
+        // get the renderer
         let rdr = Renderer::get();
 
+
+        // draw a frame on screen
         rdr.begin_draw();
         rdr.draw_line(vec2!(2, 7), vec2!(28, 6), Color::WHITE);
         rdr.draw_rect(vec2!(40, 15), vec2!(15, -10), Color::RED);
@@ -68,11 +75,18 @@ mod tests {
 
         rdr.draw_ellipse_boundary(vec2!(60, 30), vec2!(4, 4), Color::DEEP_PINK);
 
+        rdr.draw_rect(vec2!(80, 5), vec2!(16, 8), Color::CORAL);
+        rdr.draw_whole_image_alpha(img.clone(), vec2!(80, 5), Color::BLACK);
+
         rdr.ring_bell();
 
         rdr.end_draw();
-        sleep(Duration::from_secs(2));
+        
+        
+        // wait for input and exit
+        Input::get().get_event_blocking();
 
+        // exit properly
         Renderer::exit();
     }
 

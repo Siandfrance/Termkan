@@ -13,3 +13,4 @@ readme = "README.md"
 [dependencies]
 termios = "0.3"
 libc = "0.2"
+image = "0.24.2"

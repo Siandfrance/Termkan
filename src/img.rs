@@ -29,6 +29,11 @@ use crate::math::Vec2;
 
 use std::ops::{Index, IndexMut};
 use std::fmt;
+use std::path::Path;
+
+
+use image::io::Reader as ImageReader;
+use image::{Pixel};
 
 
 /// RGB Color struct.
@@ -251,6 +256,28 @@ impl Image {
     }
 
 
+    /// Loads an image from a file
+    pub fn load<P>(path: P) -> Result<Self, &'static str>
+            where P: AsRef<Path> {
+        let img = match ImageReader::open(path) {
+            Ok(s) => match s.decode() {
+                Ok(img) => img,
+                Err(_) => return Err("Could not decode image")
+            }
+            Err(_) => return Err("Could not read image")
+        }.to_rgb8();
+        let mut result = Image::new(img.width() as usize, img.height() as usize);
+        for i in 0..img.width() {
+            for j in 0..img.height() {
+                let px = img.get_pixel(i, j).channels();
+                result[vec2!(i as i32, j as i32)] = Color::rgb(px[0], px[1], px[2]);
+            }
+        }
+        Ok(result)
+    }
+
+
+
     /// Returns the size of the image.
     pub fn size(&self) -> Vec2 {
         self.size
@@ -419,6 +446,74 @@ impl Image {
             y -= 1;
             self.plot_ellipse_points(center, Vec2::new(x, y), c);
         }
+    }
+
+
+    /// Draws an image at position `pos`. 
+    /// 
+    /// Negative size results in flipped image. Alpha is used to ignore a given color while drawing.
+    pub fn image(&mut self, img: &Image, pos: Vec2, size: Vec2, offset: Vec2, alpha: Option<Color>) {
+        let mut p = pos;
+        let mut s = size;
+
+        if p.x < 0 {
+            s.x += p.x - 1;
+            p.x = 0;
+        }
+        if p.y < 0 {
+            s.y += p.y - 1;
+            p.y = 0;
+        }
+
+
+        let dx = if s.x > 0 {1} else {-1};
+        let dy = if s.y > 0 {1} else {-1};
+
+
+        for j in 0..(s.y.abs()) {
+            let y = p.y + j * dy;
+            let src_y = offset.y + j;
+            if y >= self.size.y {break}
+            if src_y >= img.size.y {break}
+            for i in 0..(s.x.abs()) {
+                let x = p.x + i * dx;
+                let src_x = offset.x + i;
+                if x >= self.size.x {break}
+                if src_x >= img.size.x {break}
+
+                let pos = vec2!(x, y);
+                let src_pos = vec2!(src_x, src_y);
+
+                if let Some(acolor) = alpha {
+                    if acolor == img[src_pos] {
+                        continue;
+                    }
+                }
+                self[pos] = img[src_pos];
+            }
+        }
+    }
+
+
+    /// Draws the whole image at `pos`, ignoring the color `alpha`.
+    /// 
+    /// Literally:
+    /// ```
+    /// <image>.image(img, pos, img.size(), Vec2::ZERO, Some(alpha));
+    /// ```
+    pub fn whole_image_alpha(&mut self, img: &Image, pos: Vec2, alpha: Color) {
+        self.image(img, pos, img.size(), Vec2::ZERO, Some(alpha));
+    }
+
+
+    /// Draws the whole image at `pos`.
+    /// 
+    /// Literally:
+    /// ```
+    /// <image>.image(img, pos, img.size(), Vec2::ZERO, None);
+    /// ```
+    pub fn whole_image(&mut self, img: &Image, pos: Vec2) {
+        self.image(img, pos, img.size(), Vec2::ZERO, None);
     }
 }
 

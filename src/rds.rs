@@ -38,7 +38,7 @@ use std::mem;
 use std::io::{stdout, Write};
 
 use std::thread;
-use std::sync::{mpsc, Barrier, Arc};
+use std::sync::{mpsc, Barrier, Arc, Mutex};
 
 use std::io::stdin;
 use std::os::unix::io::AsRawFd;
@@ -59,6 +59,10 @@ enum RenderingDirective {
     DrawRectBoudary(Vec2, Vec2, Color),
     DrawEllipseBoudary(Vec2, Vec2, Color),
     DrawPoint(Vec2, Color),
+
+    DrawImage(Arc<Mutex<Image>>, Vec2, Vec2, Vec2, Option<Color>),
+    DrawWholeImageAlpha(Arc<Mutex<Image>>, Vec2, Color),
+    DrawWholeImage(Arc<Mutex<Image>>, Vec2),
 
     ClearScreen(Color),
 
@@ -159,6 +163,10 @@ impl Renderer {
                     RenderingDirective::DrawRectBoudary(p, s, c) => screen.rect_boudary(p, s, c),
                     RenderingDirective::DrawEllipseBoudary(center, s, c) => screen.ellipse_boundary(center, s, c),
                     RenderingDirective::DrawPoint(p, c) => screen.point(p, c),
+
+                    RenderingDirective::DrawImage(img, pos, size, off, alpha) => screen.image(&(*img.lock().unwrap()), pos, size, off, alpha),
+                    RenderingDirective::DrawWholeImageAlpha(img, pos, alpha) => screen.whole_image_alpha(&(*img.lock().unwrap()), pos, alpha),
+                    RenderingDirective::DrawWholeImage(img, pos) => screen.whole_image(&(*img.lock().unwrap()), pos),
 
                     RenderingDirective::ClearScreen(c) => screen.clear(c),
 
@@ -359,6 +367,40 @@ impl Renderer {
         self.can_draw();
         self.sender.send(RenderingDirective::DrawPoint(p, c)).expect("Rendering thread stoped");
     }
+
+
+    /// Draws an image at position `pos`. 
+    /// 
+    /// Negative size results in flipped image. Alpha is used to ignore a given color while drawing.
+    pub fn draw_image(&mut self, img: Arc<Mutex<Image>>, pos: Vec2, size: Vec2, offset: Vec2, alpha: Option<Color>) {
+        self.can_draw();
+        self.sender.send(RenderingDirective::DrawImage(img, pos, size, offset, alpha)).expect("Rendering thread stoped");
+    }
+
+
+    /// Draws the whole image at `pos`, ignoring the color `alpha`.
+    /// 
+    /// Equivalent to:
+    /// ```
+    /// rdr.image(img, pos, img.size(), Vec2::ZERO, Some(alpha));
+    /// ```
+    pub fn draw_whole_image_alpha(&mut self, img: Arc<Mutex<Image>>, pos: Vec2, alpha: Color) {
+        self.can_draw();
+        self.sender.send(RenderingDirective::DrawWholeImageAlpha(img, pos, alpha)).expect("Rendering thread stoped");
+    }
+
+
+    /// Draws the whole image at `pos`.
+    /// 
+    /// Equivalent to:
+    /// ```
+    /// rdr.image(img, pos, img.size(), Vec2::ZERO, None);
+    /// ```
+    pub fn draw_whole_image(&mut self, img: Arc<Mutex<Image>>, pos: Vec2) {
+        self.can_draw();
+        self.sender.send(RenderingDirective::DrawWholeImage(img, pos)).expect("Rendering thread stoped");
+    }
+
 
 
     /// Rings the terminal bell. Can only be called during the creation of a frame
