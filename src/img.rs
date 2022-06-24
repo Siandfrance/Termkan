@@ -257,7 +257,7 @@ impl Image {
 
 
     /// Loads an image from a file.
-    pub fn load<P>(path: P) -> Result<Self, &'static str>
+    pub fn load<P>(path: P) -> Result<Self, String>
             where P: AsRef<Path> {
         let img = match ImageReader::open(path) {
             Ok(s) => match s.decode() {
@@ -278,7 +278,7 @@ impl Image {
 
 
     /// Saves an image to a file.
-    pub fn save<P>(&self, path: P) -> Result<(), &'static str>
+    pub fn save<P>(&self, path: P) -> Result<(), String>
             where P: AsRef<Path> {
         let mut img = RgbImage::new(self.size.x as u32, self.size.y as u32);
         for i in 0..self.size.x {
