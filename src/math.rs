@@ -209,6 +209,78 @@ impl Into<Vec2> for (u32, u32) {
 }
 
 
+impl AsRef<Vec2> for (usize, usize) {
+
+
+    fn as_ref(&self) -> &Vec2 {
+        if self.0 > i32::MAX as usize || self.1 > i32::MAX as usize {
+            panic!("Cannot convert {:?} to Vec2, integeroverflow", self);
+        }
+        unsafe {
+            let ptr: *const (usize, usize) = self;
+            &*(ptr as *const Vec2)
+        }
+    }
+}
+
+
+impl AsRef<Vec2> for (isize, isize) {
+
+
+    fn as_ref(&self) -> &Vec2 {
+        unsafe {
+            let ptr: *const (isize, isize) = self;
+            &*(ptr as *const Vec2)
+        }
+    }
+}
+
+
+impl AsMut<Vec2> for (usize, usize) {
+
+
+    fn as_mut(&mut self) -> &mut Vec2 {
+        if self.0 > i32::MAX as usize || self.1 > i32::MAX as usize {
+            panic!("Cannot convert {:?} to Vec2, integeroverflow", self);
+        }
+        unsafe {
+            let ptr: *mut (usize, usize) = self;
+            &mut *(ptr as *mut Vec2)
+        }
+    }
+}
+
+
+impl AsMut<Vec2> for (isize, isize) {
+
+
+    fn as_mut(&mut self) -> &mut Vec2 {
+        unsafe {
+            let ptr: *mut (isize, isize) = self;
+            &mut *(ptr as *mut Vec2)
+        }
+    }
+}
+
+
+impl Into<Vec2> for (isize, isize) {
+
+
+    fn into(self) -> Vec2 {
+        Vec2::new(self.0 as i32, self.1 as i32)
+    }
+}
+
+
+impl Into<Vec2> for (usize, usize) {
+
+
+    fn into(self) -> Vec2 {
+        Vec2::new(self.0 as i32, self.1 as i32)
+    }
+}
+
+
 impl AsRef<Vec2> for Vec2 {
 
     fn as_ref(&self) -> &Vec2 {
