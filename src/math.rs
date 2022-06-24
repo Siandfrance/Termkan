@@ -135,3 +135,91 @@ impl DivAssign<i32> for Vec2 {
         *self = *self / rhs;
     }
 }
+
+
+impl AsRef<Vec2> for (u32, u32) {
+
+
+    fn as_ref(&self) -> &Vec2 {
+        if self.0 > i32::MAX as u32 || self.1 > i32::MAX as u32 {
+            panic!("Cannot convert {:?} to Vec2, integeroverflow", self);
+        }
+        unsafe {
+            let ptr: *const (u32, u32) = self;
+            &*(ptr as *const Vec2)
+        }
+    }
+}
+
+
+impl AsRef<Vec2> for (i32, i32) {
+
+
+    fn as_ref(&self) -> &Vec2 {
+        unsafe {
+            let ptr: *const (i32, i32) = self;
+            &*(ptr as *const Vec2)
+        }
+    }
+}
+
+
+impl AsMut<Vec2> for (u32, u32) {
+
+
+    fn as_mut(&mut self) -> &mut Vec2 {
+        if self.0 > i32::MAX as u32 || self.1 > i32::MAX as u32 {
+            panic!("Cannot convert {:?} to Vec2, integeroverflow", self);
+        }
+        unsafe {
+            let ptr: *mut (u32, u32) = self;
+            &mut *(ptr as *mut Vec2)
+        }
+    }
+}
+
+
+impl AsMut<Vec2> for (i32, i32) {
+
+
+    fn as_mut(&mut self) -> &mut Vec2 {
+        unsafe {
+            let ptr: *mut (i32, i32) = self;
+            &mut *(ptr as *mut Vec2)
+        }
+    }
+}
+
+
+impl Into<Vec2> for (i32, i32) {
+
+
+    fn into(self) -> Vec2 {
+        Vec2::new(self.0, self.1)
+    }
+}
+
+
+impl Into<Vec2> for (u32, u32) {
+
+
+    fn into(self) -> Vec2 {
+        Vec2::new(self.0 as i32, self.1 as i32)
+    }
+}
+
+
+impl AsRef<Vec2> for Vec2 {
+
+    fn as_ref(&self) -> &Vec2 {
+        self
+    }
+}
+
+
+impl AsMut<Vec2> for Vec2 {
+
+    fn as_mut(&mut self) -> &mut Vec2 {
+        self
+    }
+}

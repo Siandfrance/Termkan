@@ -251,7 +251,7 @@ impl Image {
     pub fn new(w: usize, h: usize) -> Self {
         Self {
             data: vec![Color::BLACK; w * h],
-            size: Vec2::new(w as i32, h as i32)
+            size: vec2!(w as i32, h as i32)
         }
     }
 
@@ -308,24 +308,32 @@ impl Image {
     pub fn resize(&mut self, w: usize, h: usize) {
         self.data.resize(w * h, Color::BLACK);
         self.data.shrink_to_fit();
-        self.size = Vec2::new(w as i32, h as i32);
+        self.size = vec2!(w as i32, h as i32);
     }
 
 
-    fn is_out_of_range(&self, p: Vec2) -> bool {
+    fn is_out_of_range<A>(&self, p: A) -> bool
+        where A: AsRef<Vec2> 
+    {
+        let p = p.as_ref();
         p.x < 0 || p.y < 0 || p.x >= self.size.x || p.y >= self.size.y
     }
 
 
     /// Sets the pixel color at `p` to `c`.
-    pub fn point(&mut self, p: Vec2, c: Color) {
-        self[p] = c;
+    pub fn point<A>(&mut self, p: A, c: Color)
+        where A: AsRef<Vec2>
+    {
+        self[*p.as_ref()] = c;
     }
 
 
     /// Draws a line of color `c` between `p1` and `p2`.
-    pub fn line(&mut self, p1: Vec2, p2: Vec2, c: Color) {
-        let mut p1 = p1;
+    pub fn line<A, B>(&mut self, p1: A, p2: B, c: Color)
+        where A: AsRef<Vec2>, B: AsRef<Vec2> 
+    {
+        let mut p1 = *p1.as_ref();
+        let p2 = p2.as_ref();
 
         let dx = (p2.x - p1.x).abs();
         let sx = if p1.x < p2.x {1} else {-1};
@@ -356,19 +364,25 @@ impl Image {
 
 
     /// Same as `rect` but draws only the four sides of the rectangle.
-    pub fn rect_boudary(&mut self, p: Vec2, s: Vec2, c: Color) {
-        self.line(Vec2::new(p.x      , p.y      ), Vec2::new(p.x + s.x, p.y      ), c);
-        self.line(Vec2::new(p.x + s.x, p.y      ), Vec2::new(p.x + s.x, p.y + s.y), c);
-        self.line(Vec2::new(p.x + s.x, p.y + s.y), Vec2::new(p.x      , p.y + s.y), c);
-        self.line(Vec2::new(p.x      , p.y + s.y), Vec2::new(p.x      , p.y      ), c);
+    pub fn rect_boudary<A, B>(&mut self, p: A, s: B, c: Color)
+        where A: AsRef<Vec2>, B: AsRef<Vec2>
+    {
+        let p = p.as_ref();
+        let s = s.as_ref();
+        self.line((p.x      , p.y      ), (p.x + s.x, p.y      ), c);
+        self.line((p.x + s.x, p.y      ), (p.x + s.x, p.y + s.y), c);
+        self.line((p.x + s.x, p.y + s.y), (p.x      , p.y + s.y), c);
+        self.line((p.x      , p.y + s.y), (p.x      , p.y      ), c);
     }
 
 
     /// Draws a rectangle of color `c` and of size `s`. 
     /// `p` is the coordinate of the top left corner of the rectangle.
-    pub fn rect(&mut self, p: Vec2, s: Vec2, c: Color) {
-        let mut p = p;
-        let mut s = s;
+    pub fn rect<A, B>(&mut self, p: A, s: B, c: Color) 
+        where A: AsRef<Vec2>, B: AsRef<Vec2>
+    {
+        let mut p = *p.as_ref();
+        let mut s = *s.as_ref();
 
         if p.x < 0 {
             s.x += p.x - 1;
@@ -389,7 +403,7 @@ impl Image {
                 let x = p.x + i * dx;
                 if x >= self.size.x {break}
 
-                self[Vec2::new(x, y)] = c;
+                self[(x, y)] = c;
             }
         }
     }
@@ -403,17 +417,26 @@ impl Image {
     }
 
 
-    fn plot_ellipse_points(&mut self, center: Vec2, pos: Vec2, c: Color) {
-        self[Vec2::new(center.x + pos.x, center.y + pos.y)] = c;
-        self[Vec2::new(center.x + pos.x, center.y - pos.y)] = c;
-        self[Vec2::new(center.x - pos.x, center.y + pos.y)] = c;
-        self[Vec2::new(center.x - pos.x, center.y - pos.y)] = c;
+    fn plot_ellipse_points<A, B>(&mut self, center: A, pos: B, c: Color) 
+        where A: AsRef<Vec2>, B: AsRef<Vec2>
+    {
+        let center = center.as_ref();
+        let pos    = pos.as_ref();
+        self[(center.x + pos.x, center.y + pos.y)] = c;
+        self[(center.x + pos.x, center.y - pos.y)] = c;
+        self[(center.x - pos.x, center.y + pos.y)] = c;
+        self[(center.x - pos.x, center.y - pos.y)] = c;
     }
 
 
     /// Draws an ellipse of color `col`. `c` is the center of the ellipse and `s` is the size of the rectangle
     /// in which the ellipse is inscribed.
-    pub fn ellipse_boundary(&mut self, center: Vec2, size: Vec2, c: Color) {
+    pub fn ellipse_boundary<A, B>(&mut self, center: A, size: B, c: Color) 
+        where A: AsRef<Vec2>, B: AsRef<Vec2>
+    {
+        let center = center.as_ref();
+        let size   = size.as_ref();
+
         let a = size.x / 2;
         let b = size.y / 2;
 
@@ -427,7 +450,7 @@ impl Image {
         let d2pse = d2pe + 2 * a * a;
 
         //plot in the first region
-        self.plot_ellipse_points(center, Vec2::new(x, y), c);
+        self.plot_ellipse_points(center, (x, y), c);
         while dpse < 2 * a * a + 3 * b * b {
             if p < 0 { //east
                 p    += dpe;
@@ -440,7 +463,7 @@ impl Image {
                 y -= 1;
             }
             x += 1;
-            self.plot_ellipse_points(center, Vec2::new(x, y), c);
+            self.plot_ellipse_points(center, (x, y), c);
         }
 
         //prepare to plot in the second region
@@ -462,7 +485,7 @@ impl Image {
                 x += 1;
             }
             y -= 1;
-            self.plot_ellipse_points(center, Vec2::new(x, y), c);
+            self.plot_ellipse_points(center, (x, y), c);
         }
     }
 
@@ -470,9 +493,12 @@ impl Image {
     /// Draws an image at position `pos`. 
     /// 
     /// Negative size results in flipped image. Alpha is used to ignore a given color while drawing.
-    pub fn image(&mut self, img: &Image, pos: Vec2, size: Vec2, offset: Vec2, alpha: Option<Color>) {
-        let mut p = pos;
-        let mut s = size;
+    pub fn image<A, B, C>(&mut self, img: &Image, pos: A, size: B, offset: C, alpha: Option<Color>) 
+        where A: AsRef<Vec2>, B: AsRef<Vec2>, C: AsRef<Vec2>
+    {
+        let offset = offset.as_ref();
+        let mut p = *pos.as_ref();
+        let mut s = *size.as_ref();
 
         if p.x < 0 {
             s.x += p.x - 1;
@@ -519,7 +545,9 @@ impl Image {
     /// ```
     /// <image>.image(img, pos, img.size(), Vec2::ZERO, Some(alpha));
     /// ```
-    pub fn whole_image_alpha(&mut self, img: &Image, pos: Vec2, alpha: Color) {
+    pub fn whole_image_alpha<A>(&mut self, img: &Image, pos: A, alpha: Color) 
+        where A: AsRef<Vec2>
+    {
         self.image(img, pos, img.size(), Vec2::ZERO, Some(alpha));
     }
 
@@ -530,16 +558,19 @@ impl Image {
     /// ```
     /// <image>.image(img, pos, img.size(), Vec2::ZERO, None);
     /// ```
-    pub fn whole_image(&mut self, img: &Image, pos: Vec2) {
+    pub fn whole_image<A>(&mut self, img: &Image, pos: A) 
+        where A: AsRef<Vec2>
+    {
         self.image(img, pos, img.size(), Vec2::ZERO, None);
     }
 }
 
 
-impl Index<Vec2> for Image {
+impl<A: AsRef<Vec2>> Index<A> for Image {
     type Output = Color;
 
-    fn index(&self, p: Vec2) -> &Self::Output {
+    fn index(&self, p: A) -> &Self::Output {
+        let p = p.as_ref();
         if !self.is_out_of_range(p) {
             &self.data[(p.x + p.y * self.size.x) as usize]
         } else {
@@ -549,10 +580,11 @@ impl Index<Vec2> for Image {
 }
 
 
-impl IndexMut<Vec2> for Image {
+impl<A: AsRef<Vec2>> IndexMut<A> for Image {
 
-    fn index_mut(&mut self, p: Vec2) -> &mut Self::Output {
+    fn index_mut(&mut self, p: A) -> &mut Self::Output {
         static mut TEMP: Color = Color::BLACK;
+        let p = p.as_ref();
 
         if !self.is_out_of_range(p) {
             &mut self.data[(p.x + p.y * self.size.x) as usize]

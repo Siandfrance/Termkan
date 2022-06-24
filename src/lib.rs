@@ -68,15 +68,15 @@ mod tests {
 
         // draw a frame on screen
         rdr.begin_draw();
-        rdr.draw_line(vec2!(2, 7), vec2!(28, 6), Color::WHITE);
-        rdr.draw_rect(vec2!(40, 15), vec2!(15, -10), Color::RED);
-        rdr.draw_rect_boundary(vec2!(40, 15), vec2!(15, -10), Color::CHOCOLATE);
-        rdr.draw_ellipse_boundary(vec2!(45, 25), vec2!(25, 8), Color::AQUAMARINE);
+        rdr.draw_line((2, 7), (28, 6), Color::WHITE);
+        rdr.draw_rect((40, 15), (15, -10), Color::RED);
+        rdr.draw_rect_boundary((40, 15), (15, -10), Color::CHOCOLATE);
+        rdr.draw_ellipse_boundary((45, 25), (25, 8), Color::AQUAMARINE);
 
-        rdr.draw_ellipse_boundary(vec2!(60, 30), vec2!(4, 4), Color::DEEP_PINK);
+        rdr.draw_ellipse_boundary((60, 30), (4, 4), Color::DEEP_PINK);
 
-        rdr.draw_rect(vec2!(80, 5), vec2!(16, 8), Color::CORAL);
-        rdr.draw_whole_image_alpha(img.clone(), vec2!(80, 5), Color::BLACK);
+        rdr.draw_rect((80, 5), (16, 8), Color::CORAL);
+        rdr.draw_whole_image_alpha(img.clone(), (80, 5), Color::BLACK);
 
         rdr.ring_bell();
 

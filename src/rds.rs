@@ -184,8 +184,8 @@ impl Renderer {
 
                         for j in (0..screen_size.y).step_by(2) {
                             for i in 0..screen_size.x {
-                                let pos1 = Vec2::new(i, j);
-                                let pos2 = Vec2::new(i, j + 1);
+                                let pos1 = vec2!(i, j);
+                                let pos2 = vec2!(i, j + 1);
 
                                 if screen.size() == prev_screen.size() && screen[pos1] == prev_screen[pos1] && screen[pos2] == prev_screen[pos2] {
                                     skiped = true;
@@ -285,7 +285,7 @@ impl Renderer {
         unsafe {
             let mut size: TermSize = mem::zeroed();
             libc::ioctl(libc::STDOUT_FILENO, libc::TIOCGWINSZ, &mut size as *mut _);
-            Vec2::new(size.col as i32, 2 * size.row as i32)
+            vec2!(size.col as i32, 2 * size.row as i32)
         }
     }
 
@@ -333,48 +333,66 @@ impl Renderer {
 
 
     /// Draws a line of color `c` between `p1` and `p2`.
-    pub fn draw_line(&mut self, p1: Vec2, p2: Vec2, c: Color) {
+    pub fn draw_line<A, B>(&mut self, p1: A, p2: B, c: Color) 
+        where A: AsRef<Vec2>, B: AsRef<Vec2>
+    {
         self.can_draw();
-        self.sender.send(RenderingDirective::DrawLine(p1, p2, c)).expect("Rendering thread stoped");
+        self.sender.send(RenderingDirective::DrawLine(*p1.as_ref(), *p2.as_ref(), c))
+            .expect("Rendering thread stoped");
     }
 
 
     /// Draws a rectangle of color `c` and of size `s`. 
     /// `p` is the coordinate of the top left corner of the rectangle.
-    pub fn draw_rect(&mut self, p: Vec2, s: Vec2, c: Color) {
+    pub fn draw_rect<A, B>(&mut self, p: A, s: B, c: Color) 
+        where A: AsRef<Vec2>, B: AsRef<Vec2>
+    {
         self.can_draw();
-        self.sender.send(RenderingDirective::DrawRect(p, s, c)).expect("Rendering thread stoped");
+        self.sender.send(RenderingDirective::DrawRect(*p.as_ref(), *s.as_ref(), c))
+            .expect("Rendering thread stoped");
     }
 
 
     /// Same as `draw_rect` but draws only the four sides of the rectangle.
-    pub fn draw_rect_boundary(&mut self, p: Vec2, s: Vec2, c: Color) {
+    pub fn draw_rect_boundary<A, B>(&mut self, p: A, s: B, c: Color) 
+        where A: AsRef<Vec2>, B: AsRef<Vec2>
+    {
         self.can_draw();
-        self.sender.send(RenderingDirective::DrawRectBoudary(p, s, c)).expect("Rendering thread stoped");
+        self.sender.send(RenderingDirective::DrawRectBoudary(*p.as_ref(), *s.as_ref(), c))
+            .expect("Rendering thread stoped");
     }
 
 
     /// Draws an ellipse of color `col`. `c` is the center of the ellipse and `s` is the size of the rectangle
     /// in which the ellipse is inscribed.
-    pub fn draw_ellipse_boundary(&mut self, c: Vec2, s: Vec2, col: Color) {
+    pub fn draw_ellipse_boundary<A, B>(&mut self, c: A, s: B, col: Color) 
+        where A: AsRef<Vec2>, B: AsRef<Vec2>
+    {
         self.can_draw();
-        self.sender.send(RenderingDirective::DrawEllipseBoudary(c, s, col)).expect("Rendering thread stoped");
+        self.sender.send(RenderingDirective::DrawEllipseBoudary(*c.as_ref(), *s.as_ref(), col))
+            .expect("Rendering thread stoped");
     }
 
 
     /// Sets the color of the pixel at `p` to `c`.
-    pub fn draw_point(&mut self, p: Vec2, c: Color) {
+    pub fn draw_point<A>(&mut self, p: A, c: Color) 
+        where A: AsRef<Vec2>
+    {
         self.can_draw();
-        self.sender.send(RenderingDirective::DrawPoint(p, c)).expect("Rendering thread stoped");
+        self.sender.send(RenderingDirective::DrawPoint(*p.as_ref(), c)).expect("Rendering thread stoped");
     }
 
 
     /// Draws an image at position `pos`. 
     /// 
     /// Negative size results in flipped image. Alpha is used to ignore a given color while drawing.
-    pub fn draw_image(&mut self, img: Arc<Mutex<Image>>, pos: Vec2, size: Vec2, offset: Vec2, alpha: Option<Color>) {
+    pub fn draw_image<A, B, C>(&mut self, 
+        img: Arc<Mutex<Image>>, pos: A, size: B, offset: C, alpha: Option<Color>) 
+        where A: AsRef<Vec2>, B: AsRef<Vec2>, C: AsRef<Vec2>
+    {
         self.can_draw();
-        self.sender.send(RenderingDirective::DrawImage(img, pos, size, offset, alpha)).expect("Rendering thread stoped");
+        self.sender.send(RenderingDirective::DrawImage(img, *pos.as_ref(), *size.as_ref(), *offset.as_ref(), alpha))
+            .expect("Rendering thread stoped");
     }
 
 
@@ -384,9 +402,12 @@ impl Renderer {
     /// ```
     /// rdr.image(img, pos, img.size(), Vec2::ZERO, Some(alpha));
     /// ```
-    pub fn draw_whole_image_alpha(&mut self, img: Arc<Mutex<Image>>, pos: Vec2, alpha: Color) {
+    pub fn draw_whole_image_alpha<A>(&mut self, img: Arc<Mutex<Image>>, pos: A, alpha: Color) 
+        where A: AsRef<Vec2>
+    {
         self.can_draw();
-        self.sender.send(RenderingDirective::DrawWholeImageAlpha(img, pos, alpha)).expect("Rendering thread stoped");
+        self.sender.send(RenderingDirective::DrawWholeImageAlpha(img, *pos.as_ref(), alpha))
+            .expect("Rendering thread stoped");
     }
 
 
@@ -396,9 +417,11 @@ impl Renderer {
     /// ```
     /// rdr.image(img, pos, img.size(), Vec2::ZERO, None);
     /// ```
-    pub fn draw_whole_image(&mut self, img: Arc<Mutex<Image>>, pos: Vec2) {
+    pub fn draw_whole_image<A>(&mut self, img: Arc<Mutex<Image>>, pos: A) 
+        where A: AsRef<Vec2>
+    {
         self.can_draw();
-        self.sender.send(RenderingDirective::DrawWholeImage(img, pos)).expect("Rendering thread stoped");
+        self.sender.send(RenderingDirective::DrawWholeImage(img, *pos.as_ref())).expect("Rendering thread stoped");
     }
 
 
