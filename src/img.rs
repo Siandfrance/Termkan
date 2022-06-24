@@ -262,9 +262,9 @@ impl Image {
         let img = match ImageReader::open(path) {
             Ok(s) => match s.decode() {
                 Ok(img) => img,
-                Err(_) => return Err("Could not decode image")
+                Err(e) => return Err(format!("{}", e))
             }
-            Err(_) => return Err("Could not read image")
+            Err(e) => return Err(format!("{}", e))
         }.to_rgb8();
         let mut result = Image::new(img.width() as usize, img.height() as usize);
         for i in 0..img.width() {
